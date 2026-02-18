@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Thai Consonants Quiz</title>
+  <style>
+    :root{
+      --bg:#f4f5f7;
+      --card:#ffffff;
+      --shadow: 0 18px 40px rgba(0,0,0,.08);
+      --muted:#6b7280;
+      --text:#111827;
+      --btn:#eceff3;
+      --btnHover:#e4e7ec;
+      --good:#16a34a;
+      --bad:#dc2626;
+      --blue:#1677ff;
+      --blueHover:#0f66de;
+      --radius:18px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans Thai", sans-serif;
+      background: var(--bg);
+      color:var(--text);
+      min-height:100vh;
+      display:grid;
+      place-items:center;
+      padding:24px;
+    }
+    .card{
+      width:min(720px, 92vw);
+      background:var(--card);
+      border-radius:22px;
+      box-shadow:var(--shadow);
+      padding:40px 26px 34px;
+      text-align:center;
+    }
+
+    /* ===== Start screen ===== */
+    .start h1{
+      margin:0 0 6px;
+      font-size:28px;
+      font-weight:800;
+      letter-spacing:.2px;
+    }
+    .start .sub{
+      margin:0 0 22px;
+      color:var(--text);
+      font-size:18px;
+      font-weight:500;
+    }
+    .start .cta{
+      border:none;
+      background:var(--blue);
+      color:#fff;
+      font-size:18px;
+      padding:12px 22px;
+      border-radius:10px;
+      cursor:pointer;
+      box-shadow: 0 10px 20px rgba(22,119,255,.22);
+      transition: background .15s ease, transform .03s ease;
+    }
+    .start .cta:hover{ background:var(--blueHover); }
+    .start .cta:active{ transform: translateY(1px); }
+
+    /* ===== Quiz screen ===== */
+    .hearts{
+      font-size:30px;
+      letter-spacing:10px;
+      margin-bottom:10px;
+      user-select:none;
+    }
+    .quizTitle{
+      margin:0 0 22px;
+      font-size:34px;
+      font-weight:750;
+    }
+    .letter{
+      font-size:120px;
+      line-height:1;
+      margin:10px 0 18px;
+      user-select:none;
+    }
+    .feedback{
+      min-height:22px;
+      margin: 4px 0 14px;
+      font-size:15px;
+      color:var(--muted);
+    }
+    .choices{
+      display:grid;
+      gap:14px;
+      margin-top:6px;
+    }
+    button.choice{
+      border:none;
+      background:var(--btn);
+      padding:18px 16px;
+      border-radius:14px;
+      font-size:22px;
+      cursor:pointer;
+      transition: background .15s ease, transform .03s ease;
+    }
+    button.choice:hover{ background:var(--btnHover); }
+    button.choice:active{ transform: translateY(1px); }
+
+    .row{
+      margin-top:18px;
+      display:flex;
+      gap:10px;
+      justify-content:center;
+      flex-wrap:wrap;
+    }
+    .mini{
+      font-size:13px;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid rgba(0,0,0,.10);
+      background:#fff;
+      cursor:pointer;
+    }
+    .mini:hover{ background:#fafafa; }
+
+    .pill{
+      display:inline-block;
+      margin-top:6px;
+      font-size:13px;
+      color:var(--muted);
+    }
+
+    .good{ color: var(--good); }
+    .bad{ color: var(--bad); }
+
+    /* overlay */
+    .overlay{
+      position:fixed;
+      inset:0;
+      background: rgba(17,24,39,.55);
+      display:none;
+      place-items:center;
+      padding:20px;
+    }
+    .modal{
+      width:min(520px, 92vw);
+      background:#fff;
+      border-radius:20px;
+      box-shadow: var(--shadow);
+      padding:26px;
+      text-align:center;
+    }
+    .modal h2{ margin:0 0 8px; font-size:28px; }
+    .modal p{ margin:0 0 18px; color:var(--muted); }
+    .big{
+      font-size:44px;
+      margin: 10px 0 10px;
+    }
+
+    /* page switching */
+    .hidden{ display:none; }
+  </style>
+</head>
+<body>
+
+  <!-- START PAGE -->
+  <div class="card start" id="startPage">
+    <h1>CSII Lost-ship-Karnchang presents</h1>
+    <p class="sub">Thai Consonants</p>
+    <button class="cta" id="btnStartQuiz">Start Quiz</button>
+  </div>
+
+  <!-- QUIZ PAGE -->
+  <div class="card hidden" id="quizPage">
+    <div class="hearts" id="hearts">❤️ ❤️ ❤️</div>
+    <h1 class="quizTitle">Thai Consonant Drill</h1>
+
+    <div class="letter" id="letter">ก</div>
+    <div class="feedback" id="feedback">Pick the correct pairing.</div>
+
+    <div class="choices" id="choices"></div>
+
+    <div class="row">
+      <button class="mini" id="btnSpeak">Speak</button>
+      <button class="mini" id="btnSkip">Skip</button>
+      <button class="mini" id="btnReset">Reset</button>
+    </div>
+
+    <div class="pill">Tip: Wrong answer = lose 1 heart. 0 hearts = game over.</div>
+  </div>
+
+  <!-- GAME OVER -->
+  <div class="overlay" id="overlay">
+    <div class="modal">
+      <div class="big">💀</div>
+      <h2>Game Over</h2>
+      <p id="gameOverText">You ran out of hearts.</p>
+      <div class="row">
+        <button class="mini" id="btnPlayAgain">Play Again</button>
+        <button class="mini" id="btnBackToStart">Back to Start</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // ===== Data =====
+  const CONSONANTS = [
+    { ch:"ก", label:"gor gai", name:"ก ไก่" },
+    { ch:"ข", label:"khor khai", name:"ข ไข่" },
+    { ch:"ฃ", label:"khor khuat", name:"ฃ ขวด" },
+    { ch:"ค", label:"khor khwai", name:"ค ควาย" },
+    { ch:"ฅ", label:"khor khon", name:"ฅ คน" },
+    { ch:"ฆ", label:"khor rakhang", name:"ฆ ระฆัง" },
+    { ch:"ง", label:"ngor ngu", name:"ง งู" },
+    { ch:"จ", label:"jor jan", name:"จ จาน" },
+    { ch:"ฉ", label:"chor ching", name:"ฉ ฉิ่ง" },
+    { ch:"ช", label:"chor chang", name:"ช ช้าง" },
+    { ch:"ซ", label:"sor so", name:"ซ โซ่" },
+    { ch:"ฌ", label:"chor choe", name:"ฌ เฌอ" },
+    { ch:"ญ", label:"yor ying", name:"ญ หญิง" },
+    { ch:"ฎ", label:"dor chada", name:"ฎ ชฎา" },
+    { ch:"ฏ", label:"tor patak", name:"ฏ ปฏัก" },
+    { ch:"ฐ", label:"thor than", name:"ฐ ฐาน" },
+    { ch:"ฑ", label:"thor montho", name:"ฑ มณโฑ" },
+    { ch:"ฒ", label:"thor phuthao", name:"ฒ ผู้เฒ่า" },
+    { ch:"ณ", label:"nor nen", name:"ณ เณร" },
+    { ch:"ด", label:"dor dek", name:"ด เด็ก" },
+    { ch:"ต", label:"tor tao", name:"ต เต่า" },
+    { ch:"ถ", label:"thor thung", name:"ถ ถุง" },
+    { ch:"ท", label:"thor thahan", name:"ท ทหาร" },
+    { ch:"ธ", label:"thor thong", name:"ธ ธง" },
+    { ch:"น", label:"nor nu", name:"น หนู" },
+    { ch:"บ", label:"bor baimai", name:"บ ใบไม้" },
+    { ch:"ป", label:"por pla", name:"ป ปลา" },
+    { ch:"ผ", label:"phor phueng", name:"ผ ผึ้ง" },
+    { ch:"ฝ", label:"for fa", name:"ฝ ฝา" },
+    { ch:"พ", label:"phor phan", name:"พ พาน" },
+    { ch:"ฟ", label:"for fan", name:"ฟ ฟัน" },
+    { ch:"ภ", label:"phor samphao", name:"ภ สำเภา" },
+    { ch:"ม", label:"mor ma", name:"ม ม้า" },
+    { ch:"ย", label:"yor yak", name:"ย ยักษ์" },
+    { ch:"ร", label:"ror ruea", name:"ร เรือ" },
+    { ch:"ล", label:"lor ling", name:"ล ลิง" },
+    { ch:"ว", label:"wor waen", name:"ว แหวน" },
+    { ch:"ศ", label:"sor sala", name:"ศ ศาลา" },
+    { ch:"ษ", label:"sor ruesi", name:"ษ ฤๅษี" },
+    { ch:"ส", label:"sor suea", name:"ส เสือ" },
+    { ch:"ห", label:"hor hip", name:"ห หีบ" },
+    { ch:"ฬ", label:"lor chula", name:"ฬ จุฬา" },
+    { ch:"อ", label:"or ang", name:"อ อ่าง" },
+    { ch:"ฮ", label:"hor nokhuk", name:"ฮ นกฮูก" },
+  ];
+
+  // ===== DOM =====
+  const startPage = document.getElementById("startPage");
+  const quizPage = document.getElementById("quizPage");
+  const btnStartQuiz = document.getElementById("btnStartQuiz");
+
+  const heartsEl = document.getElementById("hearts");
+  const letterEl = document.getElementById("letter");
+  const feedbackEl = document.getElementById("feedback");
+  const choicesEl = document.getElementById("choices");
+
+  const overlay = document.getElementById("overlay");
+  const gameOverText = document.getElementById("gameOverText");
+  const btnPlayAgain = document.getElementById("btnPlayAgain");
+  const btnBackToStart = document.getElementById("btnBackToStart");
+
+  const btnSpeak = document.getElementById("btnSpeak");
+  const btnSkip = document.getElementById("btnSkip");
+  const btnReset = document.getElementById("btnReset");
+
+  // ===== State =====
+  let lives = 3;
+  let current = null;
+  let lock = false;
+  let score = 0;
+  let wrong = 0;
+
+  // ===== Helpers =====
+  function shuffle(arr){
+    const a = arr.slice();
+    for(let i=a.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [a[i],a[j]]=[a[j],a[i]];
+    }
+    return a;
+  }
+
+  function pickRandom(exceptCh=null){
+    let item;
+    do {
+      item = CONSONANTS[Math.floor(Math.random()*CONSONANTS.length)];
+    } while (exceptCh && item.ch === exceptCh);
+    return item;
+  }
+
+  function updateHearts(){
+    const full = "❤️";
+    const empty = "🖤";
+    const out = [];
+    for(let i=0;i<3;i++){
+      out.push(i < lives ? full : empty);
+    }
+    heartsEl.textContent = out.join(" ");
+  }
+
+  function setFeedback(text, kind=null){
+    feedbackEl.textContent = text;
+    feedbackEl.classList.remove("good","bad");
+    if(kind) feedbackEl.classList.add(kind);
+  }
+
+  function newQuestion(){
+    lock = false;
+    setFeedback("Pick the correct pairing.", null);
+
+    current = pickRandom();
+    letterEl.textContent = current.ch;
+
+    const wrong1 = pickRandom(current.ch);
+    let wrong2 = pickRandom(current.ch);
+    while (wrong2.ch === wrong1.ch) wrong2 = pickRandom(current.ch);
+
+    const options = shuffle([
+      { text: current.label, correct:true },
+      { text: wrong1.label, correct:false },
+      { text: wrong2.label, correct:false },
+    ]);
+
+    choicesEl.innerHTML = "";
+    options.forEach(opt => {
+      const btn = document.createElement("button");
+      btn.className = "choice";
+      btn.textContent = opt.text;
+      btn.addEventListener("click", () => choose(opt.correct, opt.text));
+      choicesEl.appendChild(btn);
+    });
+  }
+
+  function choose(isCorrect, pickedText){
+    if(lock) return;
+    lock = true;
+
+    if(isCorrect){
+      score++;
+      setFeedback(`✅ Correct! ${current.ch} = ${current.label}`, "good");
+      setTimeout(newQuestion, 650);
+    } else {
+      wrong++;
+      lives--;
+      updateHearts();
+      setFeedback(`❌ Wrong. You picked "${pickedText}".`, "bad");
+
+      if(lives <= 0){
+        gameOver();
+      } else {
+        setTimeout(() => {
+          lock = false;
+          setFeedback("Try again.", null);
+        }, 600);
+      }
+    }
+  }
+
+  function gameOver(){
+    overlay.style.display = "grid";
+    gameOverText.textContent = `Score: ${score} • Wrong: ${wrong}`;
+  }
+
+  function resetGame(){
+    overlay.style.display = "none";
+    lives = 3;
+    score = 0;
+    wrong = 0;
+    updateHearts();
+    newQuestion();
+  }
+
+  function goToStart(){
+    overlay.style.display = "none";
+    quizPage.classList.add("hidden");
+    startPage.classList.remove("hidden");
+  }
+
+  function goToQuiz(){
+    startPage.classList.add("hidden");
+    quizPage.classList.remove("hidden");
+    resetGame();
+  }
+
+  // ===== Speech (optional) =====
+  function speak(text){
+    if(!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)){
+      setFeedback("Speech not supported in this browser.", "bad");
+      return;
+    }
+    try{
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = "th-TH";
+      u.rate = 0.95;
+      speechSynthesis.speak(u);
+    }catch{
+      setFeedback("Could not speak. Try another browser.", "bad");
+    }
+  }
+
+  // ===== Events =====
+  btnStartQuiz.addEventListener("click", () => goToQuiz());
+
+  btnSpeak.addEventListener("click", () => {
+    speak(current ? current.name : "พยัญชนะไทย");
+  });
+
+  btnSkip.addEventListener("click", () => {
+    if(lives <= 0) return;
+    newQuestion();
+  });
+
+  btnReset.addEventListener("click", () => resetGame());
+  btnPlayAgain.addEventListener("click", () => resetGame());
+  btnBackToStart.addEventListener("click", () => goToStart());
+
+  // Keyboard shortcuts
+  window.addEventListener("keydown", (e) => {
+    if(overlay.style.display === "grid") {
+      if(e.key === "Enter") resetGame();
+      if(e.key === "Escape") goToStart();
+      return;
+    }
+    // If still on start page
+    if(!startPage.classList.contains("hidden")){
+      if(e.key === "Enter") goToQuiz();
+      return;
+    }
+
+    if(e.key.toLowerCase() === "s") speak(current ? current.name : "พยัญชนะไทย");
+    if(e.key.toLowerCase() === "n") newQuestion();
+    if(e.key.toLowerCase() === "r") resetGame();
+    if(["1","2","3"].includes(e.key)){
+      const idx = Number(e.key) - 1;
+      const btns = choicesEl.querySelectorAll("button.choice");
+      if(btns[idx]) btns[idx].click();
+    }
+  });
+
+  // ===== Init =====
+  updateHearts();
+  // Start on start page (do not auto-start quiz)
+</script>
+</body>
+</html>
