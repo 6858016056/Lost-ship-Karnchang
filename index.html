@@ -19,7 +19,9 @@
       --blueHover:#0f66de;
       --radius:18px;
     }
-    *{box-sizing:border-box}
+
+    *{ box-sizing:border-box; }
+
     body{
       margin:0;
       font-family: system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans Thai", sans-serif;
@@ -30,6 +32,7 @@
       place-items:center;
       padding:24px;
     }
+
     .card{
       width:min(720px, 92vw);
       background:var(--card);
@@ -39,19 +42,49 @@
       text-align:center;
     }
 
-    /* ===== Start screen ===== */
     .start h1{
       margin:0 0 6px;
       font-size:28px;
       font-weight:800;
       letter-spacing:.2px;
     }
+
     .start .sub{
       margin:0 0 22px;
       color:var(--text);
       font-size:18px;
       font-weight:500;
     }
+
+    .nicknameWrap{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:10px;
+      margin-bottom:18px;
+    }
+
+    .nicknameLabel{
+      font-size:15px;
+      color:var(--muted);
+      font-weight:600;
+    }
+
+    .nicknameInput{
+      width:min(320px, 90%);
+      padding:12px 14px;
+      border:1px solid #d1d5db;
+      border-radius:12px;
+      font-size:16px;
+      outline:none;
+      transition:border-color .15s ease, box-shadow .15s ease;
+    }
+
+    .nicknameInput:focus{
+      border-color:var(--blue);
+      box-shadow:0 0 0 4px rgba(22,119,255,.12);
+    }
+
     .start .cta{
       border:none;
       background:var(--blue);
@@ -63,38 +96,50 @@
       box-shadow: 0 10px 20px rgba(22,119,255,.22);
       transition: background .15s ease, transform .03s ease;
     }
+
     .start .cta:hover{ background:var(--blueHover); }
     .start .cta:active{ transform: translateY(1px); }
 
-    /* ===== Quiz screen ===== */
     .hearts{
       font-size:30px;
       letter-spacing:10px;
       margin-bottom:10px;
       user-select:none;
     }
+
     .quizTitle{
-      margin:0 0 22px;
+      margin:0 0 8px;
       font-size:34px;
       font-weight:750;
     }
+
+    .nicknameBanner{
+      margin:0 0 18px;
+      font-size:17px;
+      color:var(--muted);
+      font-weight:600;
+    }
+
     .letter{
       font-size:120px;
       line-height:1;
       margin:10px 0 18px;
       user-select:none;
     }
+
     .feedback{
       min-height:22px;
       margin: 4px 0 14px;
       font-size:15px;
       color:var(--muted);
     }
+
     .choices{
       display:grid;
       gap:14px;
       margin-top:6px;
     }
+
     button.choice{
       border:none;
       background:var(--btn);
@@ -104,6 +149,7 @@
       cursor:pointer;
       transition: background .15s ease, transform .03s ease;
     }
+
     button.choice:hover{ background:var(--btnHover); }
     button.choice:active{ transform: translateY(1px); }
 
@@ -114,6 +160,7 @@
       justify-content:center;
       flex-wrap:wrap;
     }
+
     .mini{
       font-size:13px;
       padding:10px 12px;
@@ -122,6 +169,7 @@
       background:#fff;
       cursor:pointer;
     }
+
     .mini:hover{ background:#fafafa; }
 
     .pill{
@@ -134,7 +182,6 @@
     .good{ color: var(--good); }
     .bad{ color: var(--bad); }
 
-    /* overlay */
     .overlay{
       position:fixed;
       inset:0;
@@ -143,6 +190,7 @@
       place-items:center;
       padding:20px;
     }
+
     .modal{
       width:min(520px, 92vw);
       background:#fff;
@@ -151,14 +199,15 @@
       padding:26px;
       text-align:center;
     }
+
     .modal h2{ margin:0 0 8px; font-size:28px; }
     .modal p{ margin:0 0 18px; color:var(--muted); }
+
     .big{
       font-size:44px;
       margin: 10px 0 10px;
     }
 
-    /* page switching */
     .hidden{ display:none; }
   </style>
 </head>
@@ -168,6 +217,18 @@
   <div class="card start" id="startPage">
     <h1>CSII Lost-ship-Karnchang presents</h1>
     <p class="sub">Thai Consonants</p>
+
+    <div class="nicknameWrap">
+      <label for="nicknameInput" class="nicknameLabel">Please enter your nickname</label>
+      <input
+        type="text"
+        id="nicknameInput"
+        class="nicknameInput"
+        placeholder="Your nickname"
+        maxlength="20"
+      />
+    </div>
+
     <button class="cta" id="btnStartQuiz">Start Quiz</button>
   </div>
 
@@ -175,6 +236,7 @@
   <div class="card hidden" id="quizPage">
     <div class="hearts" id="hearts">❤️ ❤️ ❤️</div>
     <h1 class="quizTitle">Thai Consonant Drill</h1>
+    <div class="nicknameBanner" id="nicknameDisplay">Welcome!</div>
 
     <div class="letter" id="letter">ก</div>
     <div class="feedback" id="feedback">Pick the correct pairing.</div>
@@ -256,6 +318,8 @@
   const startPage = document.getElementById("startPage");
   const quizPage = document.getElementById("quizPage");
   const btnStartQuiz = document.getElementById("btnStartQuiz");
+  const nicknameInput = document.getElementById("nicknameInput");
+  const nicknameDisplay = document.getElementById("nicknameDisplay");
 
   const heartsEl = document.getElementById("hearts");
   const letterEl = document.getElementById("letter");
@@ -277,21 +341,22 @@
   let lock = false;
   let score = 0;
   let wrong = 0;
+  let playerName = "Player";
 
   // ===== Helpers =====
   function shuffle(arr){
     const a = arr.slice();
-    for(let i=a.length-1;i>0;i--){
-      const j = Math.floor(Math.random()*(i+1));
-      [a[i],a[j]]=[a[j],a[i]];
+    for(let i = a.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
     }
     return a;
   }
 
-  function pickRandom(exceptCh=null){
+  function pickRandom(exceptCh = null){
     let item;
     do {
-      item = CONSONANTS[Math.floor(Math.random()*CONSONANTS.length)];
+      item = CONSONANTS[Math.floor(Math.random() * CONSONANTS.length)];
     } while (exceptCh && item.ch === exceptCh);
     return item;
   }
@@ -300,37 +365,44 @@
     const full = "❤️";
     const empty = "🖤";
     const out = [];
-    for(let i=0;i<3;i++){
+    for(let i = 0; i < 3; i++){
       out.push(i < lives ? full : empty);
     }
     heartsEl.textContent = out.join(" ");
   }
 
-  function setFeedback(text, kind=null){
+  function setFeedback(text, kind = null){
     feedbackEl.textContent = text;
-    feedbackEl.classList.remove("good","bad");
+    feedbackEl.classList.remove("good", "bad");
     if(kind) feedbackEl.classList.add(kind);
+  }
+
+  function updateNicknameBanner(){
+    nicknameDisplay.textContent = `Nickname: ${playerName}`;
   }
 
   function newQuestion(){
     lock = false;
-    setFeedback("Pick the correct pairing.", null);
+    setFeedback("Pick the correct pairing.");
 
     current = pickRandom();
     letterEl.textContent = current.ch;
 
     const wrong1 = pickRandom(current.ch);
     let wrong2 = pickRandom(current.ch);
-    while (wrong2.ch === wrong1.ch) wrong2 = pickRandom(current.ch);
+    while(wrong2.ch === wrong1.ch){
+      wrong2 = pickRandom(current.ch);
+    }
 
     const options = shuffle([
-      { text: current.label, correct:true },
-      { text: wrong1.label, correct:false },
-      { text: wrong2.label, correct:false },
+      { text: current.label, correct: true },
+      { text: wrong1.label, correct: false },
+      { text: wrong2.label, correct: false },
     ]);
 
     choicesEl.innerHTML = "";
-    options.forEach(opt => {
+
+    options.forEach((opt) => {
       const btn = document.createElement("button");
       btn.className = "choice";
       btn.textContent = opt.text;
@@ -358,7 +430,7 @@
       } else {
         setTimeout(() => {
           lock = false;
-          setFeedback("Try again.", null);
+          setFeedback("Try again.");
         }, 600);
       }
     }
@@ -366,7 +438,7 @@
 
   function gameOver(){
     overlay.style.display = "grid";
-    gameOverText.textContent = `Score: ${score} • Wrong: ${wrong}`;
+    gameOverText.textContent = `${playerName}, your score is ${score} • Wrong: ${wrong}`;
   }
 
   function resetGame(){
@@ -375,6 +447,7 @@
     score = 0;
     wrong = 0;
     updateHearts();
+    updateNicknameBanner();
     newQuestion();
   }
 
@@ -382,9 +455,13 @@
     overlay.style.display = "none";
     quizPage.classList.add("hidden");
     startPage.classList.remove("hidden");
+    nicknameInput.focus();
   }
 
   function goToQuiz(){
+    const enteredName = nicknameInput.value.trim();
+    playerName = enteredName || "Player";
+
     startPage.classList.add("hidden");
     quizPage.classList.remove("hidden");
     resetGame();
@@ -396,19 +473,26 @@
       setFeedback("Speech not supported in this browser.", "bad");
       return;
     }
+
     try{
       speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);
       u.lang = "th-TH";
       u.rate = 0.95;
       speechSynthesis.speak(u);
-    }catch{
+    } catch {
       setFeedback("Could not speak. Try another browser.", "bad");
     }
   }
 
   // ===== Events =====
-  btnStartQuiz.addEventListener("click", () => goToQuiz());
+  btnStartQuiz.addEventListener("click", goToQuiz);
+
+  nicknameInput.addEventListener("keydown", (e) => {
+    if(e.key === "Enter"){
+      goToQuiz();
+    }
+  });
 
   btnSpeak.addEventListener("click", () => {
     speak(current ? current.name : "พยัญชนะไทย");
@@ -419,27 +503,26 @@
     newQuestion();
   });
 
-  btnReset.addEventListener("click", () => resetGame());
-  btnPlayAgain.addEventListener("click", () => resetGame());
-  btnBackToStart.addEventListener("click", () => goToStart());
+  btnReset.addEventListener("click", resetGame);
+  btnPlayAgain.addEventListener("click", resetGame);
+  btnBackToStart.addEventListener("click", goToStart);
 
-  // Keyboard shortcuts
   window.addEventListener("keydown", (e) => {
-    if(overlay.style.display === "grid") {
+    if(overlay.style.display === "grid"){
       if(e.key === "Enter") resetGame();
       if(e.key === "Escape") goToStart();
       return;
     }
-    // If still on start page
+
     if(!startPage.classList.contains("hidden")){
-      if(e.key === "Enter") goToQuiz();
       return;
     }
 
     if(e.key.toLowerCase() === "s") speak(current ? current.name : "พยัญชนะไทย");
     if(e.key.toLowerCase() === "n") newQuestion();
     if(e.key.toLowerCase() === "r") resetGame();
-    if(["1","2","3"].includes(e.key)){
+
+    if(["1", "2", "3"].includes(e.key)){
       const idx = Number(e.key) - 1;
       const btns = choicesEl.querySelectorAll("button.choice");
       if(btns[idx]) btns[idx].click();
@@ -448,7 +531,7 @@
 
   // ===== Init =====
   updateHearts();
-  // Start on start page (do not auto-start quiz)
+  nicknameInput.focus();
 </script>
 </body>
 </html>
