@@ -1,24 +1,41 @@
 import os
 from contextlib import contextmanager
 
-from flask import Flask, jsonify, request, send_from_directory
 import psycopg
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
 
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-app = Flask(__name__, static_folder=BASE_DIR, static_url_path="")
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+if not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL is not set")
 
 
-def get_database_url() -> str:
-    database_url = os.getenv("DATABASE_URL")
-    if not database_url:
-        raise RuntimeError("DATABASE_URL is not set.")
-    return database_url
+app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+class StartQuizRequest(BaseModel):
+    nickname: str = Field(min_length=1, max_length=40)
+
+
+class StartQuizResponse(BaseModel):
+    nickname: str
+    start_count: int
 
 
 @contextmanager
 def get_conn():
-    conn = psycopg.connect(get_database_url())
+    conn = psycopg.connect(DATABASE_URL)
     try:
         yield conn
         conn.commit()
@@ -44,21 +61,22 @@ def init_db():
         )
 
 
-@app.route("/")
-def index():
-    return send_from_directory(BASE_DIR, "index.html")
+@app.on_event("startup")
+def on_startup():
+    init_db()
 
 
-@app.post("/api/start-quiz")
-def start_quiz():
-    data = request.get_json(silent=True) or {}
-    nickname = (data.get("nickname") or "").strip()
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}
+
+
+@app.post("/api/start-quiz", response_model=StartQuizResponse)
+def start_quiz(payload: StartQuizRequest):
+    nickname = payload.nickname.strip()
 
     if not nickname:
-        return jsonify({"error": "Nickname is required."}), 400
-
-    if len(nickname) > 40:
-        return jsonify({"error": "Nickname must be 40 characters or less."}), 400
+        raise HTTPException(status_code=400, detail="Nickname is required")
 
     with get_conn() as conn:
         conn.execute(
@@ -82,14 +100,10 @@ def start_quiz():
             (nickname,),
         ).fetchone()
 
-    return jsonify(
-        {
-            "nickname": row[0],
-            "start_count": row[1],
-        }
+    if row is None:
+      raise HTTPException(status_code=500, detail="User could not be loaded")
+
+    return StartQuizResponse(
+        nickname=row[0],
+        start_count=row[1],
     )
-
-
-if __name__ == "__main__":
-    init_db()
-    app.run(debug=True)
