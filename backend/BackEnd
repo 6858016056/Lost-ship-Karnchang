@@ -1,0 +1,95 @@
+import os
+from contextlib import contextmanager
+
+from flask import Flask, jsonify, request, send_from_directory
+import psycopg
+
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+app = Flask(__name__, static_folder=BASE_DIR, static_url_path="")
+
+
+def get_database_url() -> str:
+    database_url = os.getenv("DATABASE_URL")
+    if not database_url:
+        raise RuntimeError("DATABASE_URL is not set.")
+    return database_url
+
+
+@contextmanager
+def get_conn():
+    conn = psycopg.connect(get_database_url())
+    try:
+        yield conn
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+def init_db():
+    with get_conn() as conn:
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS quiz_users (
+                id SERIAL PRIMARY KEY,
+                nickname TEXT NOT NULL UNIQUE,
+                start_count INTEGER NOT NULL DEFAULT 0,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+
+
+@app.route("/")
+def index():
+    return send_from_directory(BASE_DIR, "index.html")
+
+
+@app.post("/api/start-quiz")
+def start_quiz():
+    data = request.get_json(silent=True) or {}
+    nickname = (data.get("nickname") or "").strip()
+
+    if not nickname:
+        return jsonify({"error": "Nickname is required."}), 400
+
+    if len(nickname) > 40:
+        return jsonify({"error": "Nickname must be 40 characters or less."}), 400
+
+    with get_conn() as conn:
+        conn.execute(
+            """
+            INSERT INTO quiz_users (nickname, start_count, updated_at)
+            VALUES (%s, 1, CURRENT_TIMESTAMP)
+            ON CONFLICT (nickname)
+            DO UPDATE
+            SET start_count = quiz_users.start_count + 1,
+                updated_at = CURRENT_TIMESTAMP
+            """,
+            (nickname,),
+        )
+
+        row = conn.execute(
+            """
+            SELECT nickname, start_count
+            FROM quiz_users
+            WHERE nickname = %s
+            """,
+            (nickname,),
+        ).fetchone()
+
+    return jsonify(
+        {
+            "nickname": row[0],
+            "start_count": row[1],
+        }
+    )
+
+
+if __name__ == "__main__":
+    init_db()
+    app.run(debug=True)
