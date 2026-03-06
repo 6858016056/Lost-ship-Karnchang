@@ -17,7 +17,6 @@
       --bad:#dc2626;
       --blue:#1677ff;
       --blueHover:#0f66de;
-      --radius:18px;
     }
 
     *{ box-sizing:border-box; }
@@ -77,7 +76,6 @@
       border-radius:12px;
       font-size:16px;
       outline:none;
-      transition:border-color .15s ease, box-shadow .15s ease;
     }
 
     .nicknameInput:focus{
@@ -213,7 +211,6 @@
 </head>
 <body>
 
-  <!-- START PAGE -->
   <div class="card start" id="startPage">
     <h1>CSII Lost-ship-Karnchang presents</h1>
     <p class="sub">Thai Consonants</p>
@@ -225,18 +222,17 @@
         id="nicknameInput"
         class="nicknameInput"
         placeholder="Your nickname"
-        maxlength="20"
+        maxlength="40"
       />
     </div>
 
     <button class="cta" id="btnStartQuiz">Start Quiz</button>
   </div>
 
-  <!-- QUIZ PAGE -->
   <div class="card hidden" id="quizPage">
     <div class="hearts" id="hearts">❤️ ❤️ ❤️</div>
     <h1 class="quizTitle">Thai Consonant Drill</h1>
-    <div class="nicknameBanner" id="nicknameDisplay">Welcome!</div>
+    <div class="nicknameBanner" id="nicknameDisplay">Nickname: Player • Starts: 0</div>
 
     <div class="letter" id="letter">ก</div>
     <div class="feedback" id="feedback">Pick the correct pairing.</div>
@@ -252,7 +248,6 @@
     <div class="pill">Tip: Wrong answer = lose 1 heart. 0 hearts = game over.</div>
   </div>
 
-  <!-- GAME OVER -->
   <div class="overlay" id="overlay">
     <div class="modal">
       <div class="big">💀</div>
@@ -266,7 +261,8 @@
   </div>
 
 <script>
-  // ===== Data =====
+  const BACKEND_URL = "https://lost-ship-karnchang-service.onrender.com/api/start-quiz";
+
   const CONSONANTS = [
     { ch:"ก", label:"gor gai", name:"ก ไก่" },
     { ch:"ข", label:"khor khai", name:"ข ไข่" },
@@ -314,7 +310,6 @@
     { ch:"ฮ", label:"hor nokhuk", name:"ฮ นกฮูก" },
   ];
 
-  // ===== DOM =====
   const startPage = document.getElementById("startPage");
   const quizPage = document.getElementById("quizPage");
   const btnStartQuiz = document.getElementById("btnStartQuiz");
@@ -335,15 +330,14 @@
   const btnSkip = document.getElementById("btnSkip");
   const btnReset = document.getElementById("btnReset");
 
-  // ===== State =====
   let lives = 3;
   let current = null;
   let lock = false;
   let score = 0;
   let wrong = 0;
   let playerName = "Player";
+  let startCount = 0;
 
-  // ===== Helpers =====
   function shuffle(arr){
     const a = arr.slice();
     for(let i = a.length - 1; i > 0; i--){
@@ -378,7 +372,7 @@
   }
 
   function updateNicknameBanner(){
-    nicknameDisplay.textContent = `Nickname: ${playerName}`;
+    nicknameDisplay.textContent = `Nickname: ${playerName} • Starts: ${startCount}`;
   }
 
   function newQuestion(){
@@ -458,16 +452,42 @@
     nicknameInput.focus();
   }
 
-  function goToQuiz(){
+  async function registerStartAndOpenQuiz(){
     const enteredName = nicknameInput.value.trim();
     playerName = enteredName || "Player";
 
-    startPage.classList.add("hidden");
-    quizPage.classList.remove("hidden");
-    resetGame();
+    btnStartQuiz.disabled = true;
+    btnStartQuiz.textContent = "Starting...";
+
+    try {
+      const response = await fetch(BACKEND_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ nickname: playerName })
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to register quiz start");
+      }
+
+      const data = await response.json();
+      playerName = data.nickname;
+      startCount = data.start_count;
+
+      startPage.classList.add("hidden");
+      quizPage.classList.remove("hidden");
+      resetGame();
+    } catch (error) {
+      alert("Could not start quiz. Please check the backend service.");
+      console.error(error);
+    } finally {
+      btnStartQuiz.disabled = false;
+      btnStartQuiz.textContent = "Start Quiz";
+    }
   }
 
-  // ===== Speech (optional) =====
   function speak(text){
     if(!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)){
       setFeedback("Speech not supported in this browser.", "bad");
@@ -485,12 +505,11 @@
     }
   }
 
-  // ===== Events =====
-  btnStartQuiz.addEventListener("click", goToQuiz);
+  btnStartQuiz.addEventListener("click", registerStartAndOpenQuiz);
 
   nicknameInput.addEventListener("keydown", (e) => {
     if(e.key === "Enter"){
-      goToQuiz();
+      registerStartAndOpenQuiz();
     }
   });
 
@@ -529,7 +548,6 @@
     }
   });
 
-  // ===== Init =====
   updateHearts();
   nicknameInput.focus();
 </script>
