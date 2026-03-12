@@ -1,19 +1,20 @@
 import os
 from contextlib import contextmanager
 
+from dotenv import load_dotenv
 import psycopg
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
-
 if not DATABASE_URL:
     raise RuntimeError("DATABASE_URL is not set")
 
 
-app = FastAPI()
+app = FastAPI(title="Thai Quiz Backend")
 
 app.add_middleware(
     CORSMiddleware,
@@ -25,7 +26,7 @@ app.add_middleware(
 
 
 class StartQuizRequest(BaseModel):
-    nickname: str = Field(min_length=1, max_length=40)
+    nickname: str = Field(..., min_length=1, max_length=40)
 
 
 class StartQuizResponse(BaseModel):
@@ -62,12 +63,17 @@ def init_db():
 
 
 @app.on_event("startup")
-def on_startup():
+def startup_event():
     init_db()
 
 
+@app.get("/")
+def root():
+    return {"message": "Thai Quiz backend is running"}
+
+
 @app.get("/health")
-def health_check():
+def health():
     return {"status": "ok"}
 
 
@@ -101,7 +107,7 @@ def start_quiz(payload: StartQuizRequest):
         ).fetchone()
 
     if row is None:
-      raise HTTPException(status_code=500, detail="User could not be loaded")
+        raise HTTPException(status_code=500, detail="User could not be loaded")
 
     return StartQuizResponse(
         nickname=row[0],
