@@ -1,10 +1,12 @@
 import os
+from pathlib import Path
 from contextlib import contextmanager
 
 from dotenv import load_dotenv
 import psycopg
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 load_dotenv()
@@ -34,6 +36,11 @@ def get_database_url() -> str:
     if not database_url:
         raise RuntimeError("DATABASE_URL is not set")
     return database_url
+
+
+BASE_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = BASE_DIR.parent
+INDEX_FILE = PROJECT_ROOT / "index.html"
 
 
 @contextmanager
@@ -70,8 +77,10 @@ def startup_event():
 
 
 @app.get("/")
-def root():
-    return {"message": "Thai Quiz backend is running"}
+def serve_index():
+    if INDEX_FILE.exists():
+        return FileResponse(INDEX_FILE)
+    return {"message": "index.html not found"}
 
 
 @app.get("/health")
