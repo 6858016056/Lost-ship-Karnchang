@@ -9,11 +9,6 @@ from pydantic import BaseModel, Field
 
 load_dotenv()
 
-DATABASE_URL = os.getenv("DATABASE_URL")
-if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL is not set")
-
-
 app = FastAPI(title="Thai Quiz Backend")
 
 app.add_middleware(
@@ -34,9 +29,16 @@ class StartQuizResponse(BaseModel):
     start_count: int
 
 
+def get_database_url() -> str:
+    database_url = os.getenv("DATABASE_URL")
+    if not database_url:
+        raise RuntimeError("DATABASE_URL is not set")
+    return database_url
+
+
 @contextmanager
 def get_conn():
-    conn = psycopg.connect(DATABASE_URL)
+    conn = psycopg.connect(get_database_url())
     try:
         yield conn
         conn.commit()
@@ -74,7 +76,11 @@ def root():
 
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    try:
+        get_database_url()
+        return {"status": "ok", "database_url_set": True}
+    except RuntimeError:
+        return {"status": "error", "database_url_set": False}
 
 
 @app.post("/api/start-quiz", response_model=StartQuizResponse)
